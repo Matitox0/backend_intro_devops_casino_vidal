@@ -1,3 +1,5 @@
+version: '3.9'
+
 services:
   db:
     build: ./db
@@ -9,6 +11,11 @@ services:
       - pg_data:/var/lib/postgresql/data
     networks:
       - casino-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U casino -d casino_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: .
@@ -22,9 +29,15 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy 
     networks:
       - casino-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
     build: ../frontend_intro_devops_casino_vidal
@@ -33,9 +46,15 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy 
     networks:
       - casino-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   pg_data:
